@@ -1,4 +1,4 @@
-# Raspberry Pi GNSS Tablet
+# Raspberry Pi RTK GNSS Tablet
 
 ## Parts:
 
