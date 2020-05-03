@@ -10,6 +10,7 @@ project_path = ""
 instrument_height = 2.0
 connected = False
 measure = False
+separator = ','
 
 def createProject():
     file = app.question("New Project", "Enter file name:")
@@ -18,14 +19,15 @@ def createProject():
         current_dir = os.path.dirname(os.path.realpath(__file__))
         full_path = os.path.join(current_dir, project_path)
         open(full_path,"w").close()
-        project_path.value = full_path
+        project_path = full_path
+        text_project.value = project_path
         
 def openProject():
     file = app.select_file(title="Select project", folder=".", filetypes=[["Text files", "*.txt"]], save=False)
     if file is not None and os.path.exists(file):
         global project_path
         project_path = file
-        text_project.value = project_path;
+        text_project.value = project_path
 
 def closeApp():
     if yesno("Close", "Do you want to quit?"):
@@ -73,7 +75,7 @@ def toggleDop(state):
 def connectTcpThread():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("localhost", 27100))
+        s.connect(("91.191.220.35", 27200))
 
         global connected
         while connected:
@@ -90,14 +92,21 @@ def connectTcpThread():
             text = data.decode("utf-8")
             messages = text.splitlines()
 
+            gga = None
+            gsa = None
+            gst = None
+
             for message in messages:
                 try:
                     msg = pynmea2.parse(message)
                     if isinstance(msg, pynmea2.GGA):
+                        gga = msg
                         updateLocation(msg)
                     elif isinstance(msg, pynmea2.GSA):
+                        gsa = msg
                         updateDop(msg)
                     elif isinstance(msg, pynmea2.GST):
+                        gst = msg
                         updateRmse(msg)
                     else:
                         continue
@@ -105,7 +114,42 @@ def connectTcpThread():
                     print('Parse error: {}'.format(e))
                     continue
 
-            if measure == True:
+            if measure == True and project_path is not None and os.path.exists(project_path):
+                pdop = 0.0
+                hdop = 0.0
+                vdop = 0.0
+                    
+                if gsa is not None:
+                    pdop = gsa.pdop
+                    hdop = gsa.hdop
+                    vdop = gsa.vdop
+
+                std_dev_latitude = 0.0
+                std_dev_longitude = 0.0
+                std_dev_altitude = 0.0
+
+                if gst is not None:
+                    std_dev_latitude = gst.std_dev_latitude
+                    std_dev_longitude = gst.std_dev_longitude
+                    std_dev_altitude = gst.std_dev_altitude
+                        
+                with open(project_path, 'a') as project:
+                    project.write(gga.timestamp.strftime('%H:%M:%S') + separator +
+                                  gga.lat + separator +
+                                  gga.lon + separator +
+                                  str(gga.altitude) + separator +
+                                  gga.geo_sep + separator +
+                                  str(instrument_height) + separator +
+                                  str(gga.gps_qual) + separator +
+                                  str(gga.num_sats) + separator +
+                                  str(gga.age_gps_data) + separator +
+                                  str(pdop) + separator +
+                                  str(hdop) + separator +
+                                  str(vdop) + separator +
+                                  str(std_dev_latitude) + separator +
+                                  str(std_dev_longitude) + separator +
+                                  str(std_dev_altitude) + '\n')
+                
                 time.sleep(1)
                 measure = False
                 
@@ -147,7 +191,7 @@ def savePoint():
     button_measure.enabled = False
 
 app = App(title="Land Survey", width=500, height=400)
-app.tk.attributes("-fullscreen", True)
+#app.tk.attributes("-fullscreen", True)
 
 menubar = MenuBar(app,
                   toplevel=["File", "Help"],
@@ -168,7 +212,7 @@ button = PushButton(instrument_setup_box, text="Set", padx=20, command=setInstru
 buttons_box = Box(app, width="fill", align="bottom")
 
 button_connect = PushButton(buttons_box, text="Connect", command=connectDevice, align="left")
-text_project = Text(buttons_box, text="No project selected", align="center")
+text_project = Text(buttons_box, text="No project selected", align="bottom")
 button_measure = PushButton(buttons_box, text="Measure", command=savePoint, align="right")
 
 # DOP
