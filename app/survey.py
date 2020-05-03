@@ -1,12 +1,14 @@
 from guizero import App, Text, TextBox, Box, PushButton, MenuBar, info, yesno
 from threading import Thread
-import pynmea2, socket, sys, time, os
+import pynmea2, socket, sys, time, os, logging
 
 project_path = ""
 instrument_height = 2.0
 connected = False
 measure = False
 separator = ','
+
+logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def createProject():
     file = app.question("New Project", "Enter file name:")
@@ -98,7 +100,7 @@ def connectTcpThread():
                     if isinstance(msg, pynmea2.GGA):
                         gga = msg
                         updateLocation(msg)
-                    elif isinstance(msg, pynmea2.GSA):
+                    elif isinstance(msg, pynmea2.GSA) and gsa is None:
                         gsa = msg
                         updateDop(msg)
                     elif isinstance(msg, pynmea2.GST):
@@ -107,7 +109,7 @@ def connectTcpThread():
                     else:
                         continue
                 except pynmea2.ParseError as e:
-                    print('Parse error: {}'.format(e))
+                    logging.error('Parse error: %s', e)
                     continue
 
             if measure == True:
@@ -158,8 +160,10 @@ def connectTcpThread():
                 
         s.close()
     except:
+        logging.exception("Fatal error in TCP thread", exc_info=True)
         app.error("Error", "Cannot connect to device!")
     finally:
+        connected = False
         button_connect.text = "Connect"
 
 def setInstrumentHeight():
@@ -168,6 +172,7 @@ def setInstrumentHeight():
         instrument_height = float(input_instrument_height.value)
         app.info("Information", "Instrument height successfully set!")
     except:
+        logging.exception("Fatal error in setting instrument height", exc_info=True)
         app.error("Error", "Invalid instrument height!")
 
 def connectDevice():
@@ -183,6 +188,10 @@ def connectDevice():
         button_connect.text = "Disconnect"
 
 def savePoint():
+    if connected == False:
+        app.info("Warning", "Device is not connected!")
+        return
+    
     global measure
     measure = True
     button_measure.enabled = False
