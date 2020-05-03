@@ -1,10 +1,6 @@
 from guizero import App, Text, TextBox, Box, PushButton, MenuBar, info, yesno
-import pynmea2
-import socket
-import sys
-import time
-import os
 from threading import Thread
+import pynmea2, socket, sys, time, os
 
 project_path = ""
 instrument_height = 2.0
@@ -75,7 +71,7 @@ def toggleDop(state):
 def connectTcpThread():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("91.191.220.35", 27200))
+        s.connect(("localhost", 27100))
 
         global connected
         while connected:
@@ -114,7 +110,7 @@ def connectTcpThread():
                     print('Parse error: {}'.format(e))
                     continue
 
-            if measure == True and project_path is not None and os.path.exists(project_path):
+            if measure == True:
                 pdop = 0.0
                 hdop = 0.0
                 vdop = 0.0
@@ -132,23 +128,24 @@ def connectTcpThread():
                     std_dev_latitude = gst.std_dev_latitude
                     std_dev_longitude = gst.std_dev_longitude
                     std_dev_altitude = gst.std_dev_altitude
-                        
-                with open(project_path, 'a') as project:
-                    project.write(gga.timestamp.strftime('%H:%M:%S') + separator +
-                                  gga.lat + separator +
-                                  gga.lon + separator +
-                                  str(gga.altitude) + separator +
-                                  gga.geo_sep + separator +
-                                  str(instrument_height) + separator +
-                                  str(gga.gps_qual) + separator +
-                                  str(gga.num_sats) + separator +
-                                  str(gga.age_gps_data) + separator +
-                                  str(pdop) + separator +
-                                  str(hdop) + separator +
-                                  str(vdop) + separator +
-                                  str(std_dev_latitude) + separator +
-                                  str(std_dev_longitude) + separator +
-                                  str(std_dev_altitude) + '\n')
+
+                if project_path is not None and os.path.exists(project_path):
+                    with open(project_path, 'a') as project:
+                        project.write(gga.timestamp.strftime('%H:%M:%S') + separator +
+                                      gga.lat + separator +
+                                      gga.lon + separator +
+                                      str(gga.altitude) + separator +
+                                      gga.geo_sep + separator +
+                                      str(instrument_height) + separator +
+                                      str(gga.gps_qual) + separator +
+                                      str(gga.num_sats) + separator +
+                                      str(gga.age_gps_data) + separator +
+                                      str(pdop) + separator +
+                                      str(hdop) + separator +
+                                      str(vdop) + separator +
+                                      str(std_dev_latitude) + separator +
+                                      str(std_dev_longitude) + separator +
+                                      str(std_dev_altitude) + '\n')
                 
                 time.sleep(1)
                 measure = False
