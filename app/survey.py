@@ -1,31 +1,33 @@
-from guizero import App, Text, TextBox, Box, PushButton, MenuBar, info, yesno
+from guizero import App, Text, TextBox, Box, PushButton, MenuBar, yesno
 from threading import Thread
-import pynmea2, socket, sys, time, os, logging
+import pynmea2, socket, time, os, logging
 
 project_path = ""
+project_ext = ".txt"
 instrument_height = 2.0
 connected = False
 measure = False
-separator = ','
+separator = ","
 
 logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def createProject():
     file = app.question("New Project", "Enter file name:")
     if file is not None:
-        project_path = file + ".txt"
+        project_path = file + project_ext
         current_dir = os.path.dirname(os.path.realpath(__file__))
         full_path = os.path.join(current_dir, project_path)
         open(full_path,"w").close()
-        project_path = full_path
-        text_project.value = project_path
+        setCurrentProject(full_path)
         
 def openProject():
     file = app.select_file(title="Select project", folder=".", filetypes=[["Text files", "*.txt"]], save=False)
-    if file is not None and os.path.exists(file):
-        global project_path
-        project_path = file
-        text_project.value = project_path
+    if file is not None:
+        setCurrentProject(file)
+
+def setCurrentProject(path):
+    project_path = path
+    text_project.value = project_path
 
 def closeApp():
     if yesno("Close", "Do you want to quit?"):
