@@ -1,3 +1,0 @@
-[submodule "software/logger"]
-	path = software/logger
-	url = https://github.com/Nanich87/raspberry-zero-gnss-logger.git
